@@ -8,7 +8,9 @@ FRONTEND_DIR="$ROOT/frontend"
 VENV_DIR="$ROOT/.venv"
 BACKEND_PID_FILE="$ROOT/.backend.pid"
 FRONTEND_PID_FILE="$ROOT/.frontend.pid"
+BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${PORT:-${FLASK_RUN_PORT:-5001}}"
+FRONTEND_HOST="${FRONTEND_HOST:-127.0.0.1}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
 log() {
@@ -66,8 +68,11 @@ start_backend() {
   fi
   # shellcheck source=/dev/null
   source "$VENV_DIR/bin/activate"
-  log "Starting backend on port $BACKEND_PORT (log: $ROOT/backend.log)"
-  (cd "$BACKEND_DIR" && PORT="$BACKEND_PORT" python app.py >"$ROOT/backend.log" 2>&1 & echo $! >"$BACKEND_PID_FILE")
+  log "Starting backend on $BACKEND_HOST:$BACKEND_PORT (log: $ROOT/backend.log)"
+  (
+    cd "$BACKEND_DIR" && HOST="$BACKEND_HOST" PORT="$BACKEND_PORT" python app.py >"$ROOT/backend.log" 2>&1 &
+    echo $! >"$BACKEND_PID_FILE"
+  )
 }
 
 start_frontend() {
@@ -76,7 +81,10 @@ start_frontend() {
     return
   fi
   log "Starting frontend dev server on port $FRONTEND_PORT (log: $ROOT/frontend.log)"
-  (cd "$FRONTEND_DIR" && npm run dev -- --host 0.0.0.0 --port "$FRONTEND_PORT" >"$ROOT/frontend.log" 2>&1 & echo $! >"$FRONTEND_PID_FILE")
+  (
+    cd "$FRONTEND_DIR" && npm run dev -- --host "$FRONTEND_HOST" --port "$FRONTEND_PORT" >"$ROOT/frontend.log" 2>&1 &
+    echo $! >"$FRONTEND_PID_FILE"
+  )
 }
 
 stop_all() {
@@ -104,7 +112,7 @@ case "${1:-start}" in
     ensure_frontend
     start_backend
     start_frontend
-    log "All services started. Backend: http://localhost:$BACKEND_PORT  Frontend: http://localhost:$FRONTEND_PORT"
+    log "All services started. Backend: http://$BACKEND_HOST:$BACKEND_PORT  Frontend: http://$FRONTEND_HOST:$FRONTEND_PORT"
     ;;
   stop)
     stop_all
